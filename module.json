@@ -1,0 +1,30 @@
+{
+  "id": "pf2e-creature-adjustment",
+  "title": "PF2e Creature Adjustment",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "esmodules": ["dist/bundle.js"],
+  "authors": [
+    {
+      "name": "Garrise",
+      "email": "dan19920316@gmail.com",
+      "flags": {}
+    }
+  ],
+  "flags": {
+    "canUpload": true
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "description": "Apply creature templates to PF2e NPCs in Foundry VTT"
+}

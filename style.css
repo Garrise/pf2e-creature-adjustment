@@ -1,0 +1,139 @@
+/* PF2e Creature Adjustment Module Styles */
+
+:root {
+  --ca-primary-color: #4a5568;
+  --ca-border-color: #2d3748;
+}
+
+.creature-adjustment-btn {
+  margin-left: 8px;
+  padding: 4px 8px;
+  background-color: var(--ca-primary-color);
+  color: white;
+  border: 1px solid var(--ca-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.creature-adjustment-btn:hover {
+  background-color: #5a6578;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.creature-adjustment-btn:active {
+  background-color: #3a4558;
+}
+
+.creature-adjustment-btn i {
+  font-size: 14px;
+}
+
+.creature-adjustment-dialog {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.creature-adjustment-dialog .window-title {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.creature-adjustment-dialog .dialog-buttons {
+  background-color: #1a1a1a;
+  border-top: 1px solid #404040;
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 380px;
+}
+
+.template-item {
+  padding: 12px;
+  background-color: #3a3a3a;
+  border: 2px solid #404040;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.template-item:hover {
+  background-color: #444444;
+  border-color: #606060;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.template-item.selected {
+  background-color: #4a6fa5;
+  border-color: #5a7fb5;
+  box-shadow: 0 0 12px rgba(74, 111, 165, 0.4);
+}
+
+.template-header {
+  margin-bottom: 8px;
+}
+
+.template-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.template-description {
+  font-size: 13px;
+  color: #b0b0b0;
+  line-height: 1.4;
+}
+
+.no-templates {
+  text-align: center;
+  padding: 32px 16px;
+  color: #808080;
+  font-style: italic;
+}
+
+.creature-adjustment-dialog button {
+  background-color: var(--ca-primary-color);
+  color: white;
+  border: 1px solid var(--ca-border-color);
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin: 0 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.creature-adjustment-dialog button:hover {
+  background-color: #5a6578;
+}
+
+.creature-adjustment-dialog button:active {
+  background-color: #3a4558;
+}
+
+@media (max-width: 600px) {
+  .template-list {
+    max-height: 300px;
+  }
+
+  .template-item {
+    padding: 10px;
+  }
+
+  .template-header h3 {
+    font-size: 14px;
+  }
+
+  .template-description {
+    font-size: 12px;
+  }
+}
