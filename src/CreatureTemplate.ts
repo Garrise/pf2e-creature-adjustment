@@ -1,8 +1,9 @@
-import { NPCPF2e } from "foundry-pf2e";
-import { getDC } from "./Utilities";
+import { MeleePF2e, NPCPF2e } from "foundry-pf2e";
+import { getDC, getStrikeAttackBonus, getStrikeDamage } from "./Utilities";
+import { localize } from "./localization";
 export class CreatureTemplate {
     name: string;
-    suffix: string;
+    prefix: string;
     level: number | undefined;
     rarity: string | ((oldRarity: string) => string) | undefined;
     traitsToAdd: (oldTraits: string[]) => string[] | string[] | undefined;
@@ -23,8 +24,8 @@ export class CreatureTemplate {
 
     constructor(name: string) {
         const template = templates[name];
-        this.name = template?.name;
-        this.suffix = template?.suffix;
+        this.name = localize(template?.name ?? `creature-template.${name}.name`);
+        this.prefix = localize(template?.prefix ?? `creature-template.${name}.prefix`);
         this.level = template?.level;
         this.rarity = template?.rarity;
         this.traitsToAdd = template?.traitsToAdd;
@@ -45,14 +46,102 @@ export class CreatureTemplate {
     }
     static getList() {
         // return key, value.name of templates
-        return Object.entries(templates).map(([key, value]) => ({ key, name: value.name }));
+        return Object.entries(templates).map(([key, value]) => ({ key, name: localize(value.name) }));
     }
 }
 const MAX = "max";
 const templates: Record<string, any> = {
+    "mutantCryptid": {
+        name: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.name",
+        prefix: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.prefix",
+        level: 1,
+        rarity: "rare",
+        ac: 1,
+        attack: 1,
+        DC: 1,
+        perception: 1,
+        saves: {
+            fortitude: 1,
+            reflex: 1,
+            will: 1
+        },
+        skills: {
+            all: 1
+        },
+        damage: {
+            strike: 1,
+            limitAction: 2
+        },
+        hp: function (oldLevel: number) {
+            if (oldLevel <= 1){
+                return 10;
+            } else if (oldLevel <= 4) {
+                return 15;
+            } else if (oldLevel <= 19) {
+                return 20;
+            } else {
+                return 30;
+            }
+        },
+        optionalAbilities: [
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"SEU4K3QRAUHEMRl2", slug: "cryptid-mutant-unusual-bane", name: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.unusualBane"}, // Unusual Bane
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"cfqRc4clMniqQNsl", slug: "cryptid-mutant-explosive-end", name: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.explosiveEnd"}, // Explosive End
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"ZUxt6s54TMgydXoW", slug: "cryptid-mutant-shifting-iridescence", name: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.shiftingIridescence"}, // Shifting Iridescence
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"WLmFKSzR6Xz9RqAu", slug: "cryptid-mutant-marrowlance", name: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.marrowlance"}, // Marrowlance
+        ],
+        specialAdjustments: async function (actor: NPCPF2e) {
+            // if the creature has marrowlance optional ability, fix the attack bonus and damage for the marrowlance
+            const marrowlanceItem = actor.items.find(i => i.system.slug === "cryptid-mutant-marrowlance");
+            if (marrowlanceItem) {
+                const updateData: Record<string, any> = {}
+                // If creature has other range attacks, use the attack bonus and damage of the range attack with highest attack bonus. Otherwise, use the moderate attack bonus and the weak damage roll of the creature's level.
+                let attackModifier;
+                let dice;
+                let die;
+                let modifier;
+                const rangedAttacks = actor.items.filter((i): i is MeleePF2e<typeof actor> => i.isOfType("melee") && i.isRanged);
+                if (rangedAttacks.length > 0) {
+                    // find the attack with highest attack bonus
+                    const attack = rangedAttacks.reduce((max, current) => current.system.bonus.value > max.system.bonus.value ? current : max);
+                    attackModifier = attack.system.bonus.value;
+                    const damage = attack.baseDamage;
+                    dice = damage.dice;
+                    die = damage.die;
+                    modifier = damage.modifier;
+                } else {
+                    const level = actor.system.details.level.value;
+                    attackModifier =  getStrikeAttackBonus(level, "moderate");
+                    const damage =  getStrikeDamage(level, "low");
+                    dice = damage.dice;
+                    die = damage.die;
+                    modifier = damage.modifier;
+                }
+                const ruleUpdate = {
+                    "attackModifier": attackModifier,
+                    "damage": {
+                        "base": {
+                            "damageType": "piercing",
+                            "dice": dice,
+                            "die": die,
+                            "modifier": modifier
+                        },
+                    },
+                    "key": "Strike",
+                    "range": {
+                        "increment": null,
+                        "max": 60
+                    },
+                    "slug": "marrowlance",
+                    "traits": ["unarmed", "versatile-s"]
+                }
+                updateData["system.rules"] = [ruleUpdate];
+                await marrowlanceItem.update(updateData);
+            }
+        },
+    },
     "primevalCryptid": {
-        name: "Primeval Cryptid",
-        suffix: " (Primeval Cryptid)",
+        name: "PF2ECREATUREADJUSTMENT.creature-template.primevalCryptid.name",
+        prefix: "PF2ECREATUREADJUSTMENT.creature-template.primevalCryptid.prefix",
         level: 1,
         rarity: function (oldRarity: string) {
             if (oldRarity === "common") {
@@ -108,10 +197,10 @@ const templates: Record<string, any> = {
             }
         },
         optionalAbilities: [
-            {pack: "pf2e.bestiary-family-ability-glossary", id:"7llQJrvVuCh7KjZO", slug: "cryptid-primeval-stench", name:"Stench"}, // Stench
-            {pack: "pf2e.bestiary-family-ability-glossary", id:"z9yqLBExOMk1y9cg", slug: "cryptid-primeval-broken-arsenal", name:"Broken Arsenal"}, // Broken Arsenal
-            {pack: "pf2e.bestiary-family-ability-glossary", id:"R0tsWv6QHd2jbQON", slug: "cryptid-primeval-grasp-for-life", name:"Grasp for Life"}, // Grasp for Life
-            {pack: "pf2e.bestiary-family-ability-glossary", id:"l5FyTQQ0OfICCS1c", slug: "cryptid-primeval-shockwave", name:"Shockwave"}, // Shockwave
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"7llQJrvVuCh7KjZO", slug: "cryptid-primeval-stench", name:"PF2ECREATUREADJUSTMENT.creature-template.primevalCryptid.optionalAbilities.stench"}, // Stench
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"z9yqLBExOMk1y9cg", slug: "cryptid-primeval-broken-arsenal", name:"PF2ECREATUREADJUSTMENT.creature-template.primevalCryptid.optionalAbilities.brokenArsenal"}, // Broken Arsenal
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"R0tsWv6QHd2jbQON", slug: "cryptid-primeval-grasp-for-life", name:"PF2ECREATUREADJUSTMENT.creature-template.primevalCryptid.optionalAbilities.graspForLife"}, // Grasp for Life
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"l5FyTQQ0OfICCS1c", slug: "cryptid-primeval-shockwave", name:"PF2ECREATUREADJUSTMENT.creature-template.primevalCryptid.optionalAbilities.shockwave"}, // Shockwave
         ],
         specialAdjustments: async function (actor: NPCPF2e) {
             // if size is huge or gargantuan, the reach will be increased by 5 feet
@@ -142,7 +231,7 @@ const templates: Record<string, any> = {
                 // Find @Check[fortitude|dc:] and add DC adjustment to the value after dc
                 const newDescription = description.replace(/@Check\[(.*?)\]/g, (_full: any, inner: string) => {
                     // inner is like: fortitude|dc:20...
-                    const m = inner.match(/^(.*?)(\|dc:)(\d+)(.*)$/);
+                    const m = inner.match(/(.*?)(\|dc:)(.*?)/);
                     if (!m) return `@Check[${inner}]`;
                     const type = m[1];
                     const dc = getDC(system.details.level.value, "standard");
@@ -153,8 +242,8 @@ const templates: Record<string, any> = {
         }
     },
     "rumouredCryptid": {
-        name: "Rumoured Cryptid",
-        suffix: " (Rumoured Cryptid)",
+        name: "PF2ECREATUREADJUSTMENT.creature-template.rumouredCryptid.name",
+        prefix: "PF2ECREATUREADJUSTMENT.creature-template.rumouredCryptid.prefix",
         level: 1,
         rarity: "rare",
         traitsToAdd: function (oldTraits: string[]) {
@@ -204,12 +293,12 @@ const templates: Record<string, any> = {
             {pack: "pf2e.bestiary-family-ability-glossary", id:"K0scCV18j5FzM2ei", slug: "cryptid-rumored-shifting-form"} // Shifting Form
         ],
         optionalAbilities: [
-            {pack: "pf2e.bestiary-family-ability-glossary", id:"a7SNHoP22SBoOAmA", slug: "cryptid-rumored-hybrid-form", name:"Hybrid Form"}, // Hybrid Form
-            {pack: "pf2e.bestiary-family-ability-glossary", id:"KLMdplDgOfXSLh6g", slug: "cryptid-rumored-howl", name:"Howl"} // Howl
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"a7SNHoP22SBoOAmA", slug: "cryptid-rumored-hybrid-form", name: "PF2ECREATUREADJUSTMENT.creature-template.rumouredCryptid.optionalAbilities.hybridForm"}, // Hybrid Form
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"KLMdplDgOfXSLh6g", slug: "cryptid-rumored-howl", name: "PF2ECREATUREADJUSTMENT.creature-template.rumouredCryptid.optionalAbilities.howl"} // Howl
         ],
         specialAdjustments: async function (actor: NPCPF2e) {
             const system = actor.system;
-            const updateData: any = {};
+            const updateData: any = {};``
             // add darvision of greater-darkvision for burning eyes ability
             const oldSenses = system.perception.senses;
             const newSense: any = {
@@ -231,21 +320,22 @@ const templates: Record<string, any> = {
             if (actor.items.some((i) => i.system.slug === "cryptid-rumored-hybrid-form")) {
                 // apply speed adjustment for hybrid form
                 let speedType: string | null = null;
+                // open dialog to select speed type
                 await foundry.applications.api.DialogV2.wait({
                     window: {
-                        title: "Select Hybrid Form Speed",
+                        title: localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.title"),
                     },
                     content:
-                        `<p>Select Hybrid Form Speed Type</p>` +
-                        `<div class="form-group"><label>Adjustment</label><select id="speedType">` +
-                        `<option value="burrow">Burrow</option>` +
-                        `<option value="climb">Climb</option>` +
-                        `<option value="swim">Swim</option>` +
+                        `<p>${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.description")}</p>` +
+                        `<div><select id="speedType">` +
+                        `<option value="burrow">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedBurrow")}</option>` +
+                        `<option value="climb">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedClimb")}</option>` +
+                        `<option value="swim">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedSwim")}</option>` +
                         `</select></div>`,
                     buttons: [
                         {
                             icon: '<i class="fa-solid fa-level-up-alt"></i>',
-                            label: "Select",
+                            label: localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.button"),
                             action: "select",
                             default: true,
                             callback: async (_event, button, _dialog) => {
@@ -258,6 +348,22 @@ const templates: Record<string, any> = {
                 updateData['system.attributes.speed.otherSpeeds'] = [{ type: speedType, value: speed }];
             }
             await actor.update(updateData);
+            // apply dc for howl
+            const howl = actor.items.find(i => i.system.slug === "cryptid-rumored-howl");
+            if (howl) {
+                const description = (howl.system as any)?.description?.value ?? "";
+
+                // Find @Check[fortitude|dc:] and add DC adjustment to the value after dc
+                const newDescription = description.replace(/@Check\[(.*?)\]/g, (_full: any, inner: string) => {
+                    // inner is like: fortitude|dc:20...
+                    const m = inner.match(/(.*?)(\|dc:)(.*?)/);
+                    if (!m) return `@Check[${inner}]`;
+                    const type = m[1];
+                    const dc = getDC(system.details.level.value, "hard");
+                    return `@Check[${type}|dc:${dc}]`;
+                });
+                await howl.update({ "system.description.value": newDescription });
+            }
         }
     }
 }

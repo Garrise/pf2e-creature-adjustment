@@ -11,7 +11,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client", "@league-of-foundry-developers/foundry-vtt-types", "jquery"]
+    "types": ["vite/client"]
   },
   "include": ["src/**/*"]
 }

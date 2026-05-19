@@ -4,6 +4,7 @@ import { logDebug } from "./utils/utils";
 import { IDataUpdates, IHandledItemType } from "./NPCTypes";
 import { CompendiumCollection } from "foundry-pf2e/foundry/client/documents/collections/_module.mjs";
 import { CreatureTemplate } from "./CreatureTemplate";
+import { localize } from "./localization";
 
 export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string): Promise<void> {
     const rootFolder = getFolder("cr-scaler");
@@ -23,10 +24,10 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
     };
     const template = new CreatureTemplate(adjustment);
     const itemUpdates: IDataUpdates[] = [];
-    const itemAdds: IDataUpdates[] = [];
+    const itemAdds: Array<any> = [];
 
     // apply name adjustment
-    updateData["name"] = `${actor.name} ${template.suffix}`;
+    updateData["name"] = `${template.prefix}${actor.name}`;
 
     // apply level adjustment
     const oldLevel = system.details.level.value;
@@ -247,14 +248,9 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
     if (template.abilities) {
         template.abilities.forEach((ability: {pack: string, id: string}) => {
             const pack = game.packs.get(ability.pack) as CompendiumCollection;
-            pack.getDocument(ability.id).then((doc) => {
-                const { name, system, type } = doc as ItemPF2e;
-                const itemData = {
-                    name,
-                    type,
-                    system,
-                };
-                itemAdds.push({ _id: ability.id, ...itemData } as IDataUpdates);
+            pack.getDocument(ability.id).then(doc => {
+                const abilityItemData = doc?.toJSON()
+                itemAdds.push(abilityItemData)
             });
         });
     }
@@ -264,21 +260,22 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
         let optionalAbilities: string[] = [];
         let inputOptions = "";
         for (const ability of template.optionalAbilities) {
-            inputOptions += `<label><input type="checkbox" name="optionalAbilities" value="${ability.id}"/>${ability.name}</label>`;
+            inputOptions += `<label><input type="checkbox" name="optionalAbilities" value="${ability.id}"/>${localize(ability.name)}</label>`;
         }
+        // open dialog to select optional abilities
         await foundry.applications.api.DialogV2.wait({
             window: {
-                title: "Select Optional Abilities",
+                title: localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.title"),
             },
             content:
-                `<p>Apply a specific adjustment to the selected NPC.</p>` +
+                `<p>${localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.description")}</p>` +
                 `<div>` +
                     inputOptions +
                 `</select></div>`,
             buttons: [
                 {
                     icon: '<i class="fa-solid fa-level-up-alt"></i>',
-                    label: "Select",
+                    label: localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.button"),
                     action: "select",
                     default: true,
                     callback: (_event, button, _dialog) => {
@@ -292,14 +289,9 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
                             const ability = template.optionalAbilities?.find((a) => a.id === abilityId);
                             if (!ability) return;
                             const pack = game.packs.get(ability.pack) as CompendiumCollection;
-                            pack.getDocument(ability.id).then((doc) => {
-                                const { name, system, type } = doc as ItemPF2e;
-                                const itemData = {
-                                    name,
-                                    type,
-                                    system,
-                                };
-                                itemAdds.push({ _id: ability.id, ...itemData } as IDataUpdates);
+                            pack.getDocument(ability.id).then(doc => {
+                                const abilityItemData = doc?.toJSON()
+                                itemAdds.push(abilityItemData)
                             });
                         });
                     },
