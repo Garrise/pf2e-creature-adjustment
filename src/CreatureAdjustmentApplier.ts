@@ -1,6 +1,5 @@
 import { getActor, getFolder, getFolderInFolder } from "./Utilities";
 import { AbilityItemPF2e, ItemPF2e, NPCPF2e, NPCSystemData } from "foundry-pf2e";
-import { logDebug } from "./utils/utils";
 import { IDataUpdates, IHandledItemType } from "./NPCTypes";
 import { CompendiumCollection } from "foundry-pf2e/foundry/client/documents/collections/_module.mjs";
 import { CreatureTemplate } from "./CreatureTemplate";
@@ -60,7 +59,8 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
         } else if (Array.isArray(template.traitsToRemove)) {
             traitsToRemove = [...traitsToRemove, ...(template.traitsToRemove as string[])];
         }
-        const newTraits = oldTraits.filter((trait) => !traitsToRemove.includes(trait)).concat(traitsToAdd);
+        const filteredTraits = oldTraits.filter((trait) => !traitsToRemove.includes(trait));
+        const newTraits = [...filteredTraits, ...traitsToAdd]
         updateData["system.traits.value"] = newTraits;
     }
     
@@ -158,6 +158,13 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
         }
     }
 
+    // apply senses adjustment
+    if (typeof template.senses === "function") {
+        const oldSenses = system.perception.senses;
+        const newSenses = template.senses(oldSenses);
+        updateData["system.perception.senses"] = newSenses;
+    }
+
     // apply item adjustments
     if (template.attack || template.DC || template.damage) {
         const items = actor.items as Collection<string, ItemPF2e>;
@@ -174,6 +181,7 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
             }
             // apply DC adjustment
             if (template.DC) {
+                const dcDelta: number = template.DC;
                 if ((item.type) === "spellcastingEntry") {
                     itemUpdate["system.spelldc.dc"] = parseInt((item.system as unknown as { spelldc: { dc: string } }).spelldc.dc) + template.DC;
                 } else if (item.type === "action") {
@@ -188,7 +196,7 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
                         const dcPart = m[2];
                         const dcValue = parseInt(m[3]);
                         const after = m[4] ?? "";
-                        const newDcValue = dcValue + template.DC;
+                        const newDcValue = dcValue + dcDelta;
                         return `@Check[${before}|dc:${newDcValue}${after}]`;
                     });
                     if (newDescription !== description) {
@@ -246,58 +254,48 @@ export async function applyCreatureAdjustment(actor: NPCPF2e, adjustment: string
 
     // apply abilities adjustments
     if (template.abilities) {
-        template.abilities.forEach((ability: {pack: string, id: string}) => {
-            const pack = game.packs.get(ability.pack) as CompendiumCollection;
-            pack.getDocument(ability.id).then(doc => {
-                const abilityItemData = doc?.toJSON()
-                itemAdds.push(abilityItemData)
-            });
-        });
+        for (const ability of template.abilities) {
+            const pack =  game.packs.get(ability.pack) as CompendiumCollection;
+            const document = await pack.getDocument(ability.id);
+            const abilityItemData = document?.toJSON();
+            itemAdds.push(abilityItemData);
+        }
     }
 
     // apply optional abilities adjustments
     if (template.optionalAbilities) {
-        let optionalAbilities: string[] = [];
         let inputOptions = "";
         for (const ability of template.optionalAbilities) {
             inputOptions += `<label><input type="checkbox" name="optionalAbilities" value="${ability.id}"/>${localize(ability.name)}</label>`;
         }
         // open dialog to select optional abilities
-        await foundry.applications.api.DialogV2.wait({
-            window: {
-                title: localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.title"),
-            },
-            content:
-                `<p>${localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.description")}</p>` +
-                `<div>` +
-                    inputOptions +
-                `</select></div>`,
-            buttons: [
-                {
-                    icon: '<i class="fa-solid fa-level-up-alt"></i>',
-                    label: localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.button"),
-                    action: "select",
-                    default: true,
-                    callback: (_event, button, _dialog) => {
-                        const form = button?.form as HTMLFormElement | undefined;
-                        if (!form) return;
-
-                        optionalAbilities = Array.from(
-                            form.querySelectorAll<HTMLInputElement>('input[name="optionalAbilities"]:checked'),
-                        ).map((input) => input.value);
-                        optionalAbilities.forEach((abilityId) => {
-                            const ability = template.optionalAbilities?.find((a) => a.id === abilityId);
-                            if (!ability) return;
-                            const pack = game.packs.get(ability.pack) as CompendiumCollection;
-                            pack.getDocument(ability.id).then(doc => {
-                                const abilityItemData = doc?.toJSON()
-                                itemAdds.push(abilityItemData)
-                            });
-                        });
-                    },
+        try {
+            const optionalAbilities: string[] = await foundry.applications.api.DialogV2.prompt({
+                window: {
+                    title: localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.title")
                 },
-            ],
-        });
+                content: 
+                    `<p>${localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.description")}</p>` +
+                    `<div>` +
+                        inputOptions +
+                    `</select></div>`,
+                ok: {
+                    label: localize("PF2ECREATUREADJUSTMENT.optionalAbilitiesDialog.button"),
+                    callback: (event, button, dialog) => new FormData(button.form!).getAll("optionalAbilities") as string[]
+                },
+                rejectClose: false
+            }) as string[] ?? [];
+            for (const abilityId of optionalAbilities) {
+                const ability = template.optionalAbilities?.find((a) => a.id === abilityId);
+                if (!ability) return;
+                const pack = game.packs.get(ability.pack) as CompendiumCollection;
+                const document = await pack.getDocument(ability.id);
+                const abilityItemData = document?.toJSON()
+                itemAdds.push(abilityItemData);
+            }
+        } catch (error) {
+            throw error;
+        }
     }
 
     // update actor

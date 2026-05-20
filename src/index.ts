@@ -8,21 +8,23 @@ Hooks.on('renderActorSheet', async (sheet, html) => {
         return;
     }
 
-    if (!actor.canUserModify(game.user!, 'update')) {
+    if (!actor.canUserModify(game.user, 'update')) {
         return;
     }
     const element = html.find('.window-header .window-title');
     const label = localize("PF2ECREATUREADJUSTMENT.buttonEntry");
-    const button = $(
-        `<a class="popout" style><i style="padding: 0 4px;" class="fas fa-book"></i>${label}</a>`,
-    );
+    const button = document.createElement('a');
+    button.classList.add('popout');
+    button.setAttribute('role', 'button');
+    button.innerHTML = `<i style="padding: 0 4px;" class="fas fa-book"></i>${label}`
     const options = CreatureTemplate.getList();
     let optionElements = '';
     options.forEach((option) => {
         optionElements += `<option value="${option.key}">${option.name}</option>`;
     });
 
-    button.on('click', async () => {
+    button.addEventListener('click', async (event) => {
+        event.preventDefault();
         // open main dialog
         await foundry.applications.api.DialogV2.wait({
             window: {
@@ -30,7 +32,7 @@ Hooks.on('renderActorSheet', async (sheet, html) => {
             },
             content:
                 `<p>${localize("PF2ECREATUREADJUSTMENT.mainDialog.description")}</p>` +
-                `<div><select id="adjustment">` +
+                `<div><select id="adjustment" name="adjustment">` +
                 optionElements +
                 `</select></div>`,
             buttons: [
@@ -41,7 +43,7 @@ Hooks.on('renderActorSheet', async (sheet, html) => {
                     default: true,
                     callback: async (_event, button, _dialog) => {
                         ui.notifications?.info(localize("PF2ECREATUREADJUSTMENT.notification.applying"));
-                        const adjustment = button?.form?.elements["adjustment"].value;
+                        const adjustment = new FormData(button.form!).get("adjustment") as string;
                         const adjustmentName = options.find((option) => option.key === adjustment)?.name || adjustment;
                         const originalName = actor.name;
                         await applyCreatureAdjustment(actor, adjustment);

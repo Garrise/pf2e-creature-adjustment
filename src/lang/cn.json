@@ -30,5 +30,7 @@
   "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.unusualBane": "罕见灾厄",
   "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.explosiveEnd": "自爆终局",
   "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.shiftingIridescence": "弘光偏折",
-  "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.marrowlance": "骨枪"
+  "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.marrowlance": "骨枪",
+  "PF2ECREATUREADJUSTMENT.creature-template.experimentalCryptid.name": "实验性神秘生物",
+  "PF2ECREATUREADJUSTMENT.creature-template.experimentalCryptid.prefix": "实验性神秘"
 }

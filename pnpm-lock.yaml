@@ -15,12 +15,6 @@ importers:
       '@foundryvtt/foundryvtt-cli':
         specifier: github:xyzzy42/foundryvtt-cli#objects
         version: https://codeload.github.com/xyzzy42/foundryvtt-cli/tar.gz/ccb58ccc99e7a034cdac90b0f857cf6eb2293cab
-      '@types/jquery':
-        specifier: ^4.0.0
-        version: 4.0.0
-      '@types/node':
-        specifier: ^25.9.0
-        version: 25.9.0
       '@types/papaparse':
         specifier: ^5.5.2
         version: 5.5.2

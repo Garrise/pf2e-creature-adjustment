@@ -1,5 +1,5 @@
 {
-  "name": "PF2ECREATUREADJUSTMENT",
+  "name": "pf2-creature-adjustment",
   "version": "1.0.0",
   "description": "",
   "type": "module",
@@ -16,8 +16,6 @@
   "packageManager": "pnpm@10.33.1",
   "devDependencies": {
     "@foundryvtt/foundryvtt-cli": "github:xyzzy42/foundryvtt-cli#objects",
-    "@types/jquery": "^4.0.0",
-    "@types/node": "^25.9.0",
     "@types/papaparse": "^5.5.2",
     "foundry-pf2e": "github:7H3LaughingMan/foundry-pf2e#v13",
     "typescript": "^5.5.0",

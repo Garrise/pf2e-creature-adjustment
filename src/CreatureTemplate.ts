@@ -1,6 +1,7 @@
 import { MeleePF2e, NPCPF2e } from "foundry-pf2e";
 import { getDC, getStrikeAttackBonus, getStrikeDamage } from "./Utilities";
 import { localize } from "./localization";
+import { perception } from "foundry-pf2e/foundry/client/canvas/_module.mjs";
 export class CreatureTemplate {
     name: string;
     prefix: string;
@@ -18,6 +19,7 @@ export class CreatureTemplate {
     skills: Record<string, number | "max"> | undefined;
     damage: Record<string, number> | undefined;
     hp: (oldLevel: number) => number | number | undefined;
+    senses: (oldSenses: Array<any>) => Array<any> | undefined;
     abilities: {pack: string, id: string, slug: string}[] | undefined;
     optionalAbilities: {pack: string, id: string, slug: string, name: string}[] | undefined;
     specialAdjustments: (actor: NPCPF2e) => Promise<void> | undefined;
@@ -40,6 +42,7 @@ export class CreatureTemplate {
         this.skills = template?.skills;
         this.damage = template?.damage;
         this.hp = template?.hp;
+        this.senses = template?.senses;
         this.abilities = template?.abilities;
         this.optionalAbilities = template?.optionalAbilities;
         this.specialAdjustments = template?.specialAdjustments;
@@ -51,6 +54,53 @@ export class CreatureTemplate {
 }
 const MAX = "max";
 const templates: Record<string, any> = {
+    "experimentalCryptid": {
+        name: "PF2ECREATUREADJUSTMENT.creature-template.experimentalCryptid.name",
+        prefix: "PF2ECREATUREADJUSTMENT.creature-template.experimentalCryptid.prefix",
+        level: 1,
+        traitsToAdd: ["experiment"],
+        ac: 1,
+        attack: 1,
+        DC: 1,
+        perception: 1,
+        saves: {
+            fortitude: 1,
+            reflex: 1,
+            will: 1
+        },
+        skills: {
+            all: 1
+        },
+        damage: {
+            strike: 1,
+            limitAction: 2
+        },
+        hp: function (oldLevel: number) {
+            if (oldLevel <= 1){
+                return 10;
+            } else if (oldLevel <= 4) {
+                return 15;
+            } else if (oldLevel <= 19) {
+                return 20;
+            } else {
+                return 30;
+            }
+        },
+        senses: function(oldSenses: Array<any>) {
+            if (oldSenses.some((sense) => sense.type === "darkvision")) {
+                return [...oldSenses, {type: "greater-darkvision"}];
+            } else {
+                return [...oldSenses, {type: "darkvision"}];
+            }
+        },
+        abilities: [
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"xxI7QpVWLiGjdu4B", slug: "cryptid-experimental-operational-flaw"}, // Operational Flaw
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"uQ7cI0oerU7lDLhT", slug: "cryptid-experimental-power-surge"}, // Power Surge
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"qYVKpytVx46oBVox", slug: "cryptid-experimental-energy-wave"}, // Energy Wave
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"uDjn2b2ZrZycQQyv", slug: "cryptid-experimental-clobber"}, // Clobber
+            {pack: "pf2e.bestiary-family-ability-glossary", id:"UsWJ13sDyOgOGWvm", slug: "cryptid-experimental-augmented"} // Augmented
+        ]
+    },
     "mutantCryptid": {
         name: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.name",
         prefix: "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.prefix",
@@ -284,6 +334,14 @@ const templates: Record<string, any> = {
                 return 30;
             }
         },
+        senses: function(oldSenses: Array<any>) {
+            // add darvision of greater-darkvision for burning eyes ability
+            if (oldSenses.some((sense) => sense.type === "darkvision")) {
+                return [...oldSenses, {type: "greater-darkvision"}];
+            } else {
+                return [...oldSenses, {type: "darkvision"}];
+            }
+        },
         abilities: [
             {pack: "pf2e.bestiary-family-ability-glossary", id:"l2ov5uPpfOAoyXAL", slug: "cryptid-rumored-obscura-vulnerability"}, // Obscura Vulnerability
             {pack: "pf2e.bestiary-family-ability-glossary", id:"Bqnh5wiXVymfDgTw", slug: "cryptid-rumored-burning-eyes"}, // Burning Eyes
@@ -299,53 +357,34 @@ const templates: Record<string, any> = {
         specialAdjustments: async function (actor: NPCPF2e) {
             const system = actor.system;
             const updateData: any = {};``
-            // add darvision of greater-darkvision for burning eyes ability
-            const oldSenses = system.perception.senses;
-            const newSense: any = {
-                "acuity": "precise",
-                "emphasizeLabel": false,
-                "range": Infinity,
-                "source": null
-            }
-            if (oldSenses.some((sense) => sense.type === "darkvision")) {
-                newSense["type"] = "greater-darkvision";
-                newSense["label"] = "Greater Darkvision";
-                updateData["system.perception.senses"] = [...oldSenses, newSense];
-            } else {
-                newSense["type"] = "darkvision";
-                newSense["label"] = "Darkvision";
-                updateData["system.perception.senses"] = [...oldSenses, newSense];
-            }
             // add a new speed type if the creature has Hybrid Form optional ability
             if (actor.items.some((i) => i.system.slug === "cryptid-rumored-hybrid-form")) {
-                // apply speed adjustment for hybrid form
-                let speedType: string | null = null;
                 // open dialog to select speed type
-                await foundry.applications.api.DialogV2.wait({
-                    window: {
-                        title: localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.title"),
-                    },
-                    content:
-                        `<p>${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.description")}</p>` +
-                        `<div><select id="speedType">` +
-                        `<option value="burrow">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedBurrow")}</option>` +
-                        `<option value="climb">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedClimb")}</option>` +
-                        `<option value="swim">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedSwim")}</option>` +
-                        `</select></div>`,
-                    buttons: [
-                        {
-                            icon: '<i class="fa-solid fa-level-up-alt"></i>',
-                            label: localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.button"),
-                            action: "select",
-                            default: true,
-                            callback: async (_event, button, _dialog) => {
-                                speedType = (button?.form?.elements.namedItem("speedType") as HTMLSelectElement | null)?.value ?? null;
-                            },
+                try {
+                    const speedType = await foundry.applications.api.DialogV2.prompt({
+                        window: {
+                            title: localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.title"),
                         },
-                    ],
-                });
-                const speed = system.movement.speeds.land.value;
-                updateData['system.attributes.speed.otherSpeeds'] = [{ type: speedType, value: speed }];
+                        content:
+                            `<p>${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.description")}</p>` +
+                            `<div>` +
+                            `<label><input type="radio" name="speedType" value="burrow" checked>${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedBurrow")}</label>` +
+                            `<label><input type="radio" name="speedType" value="climb">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedClimb")}</label>` +
+                            `<label><input type="radio" name="speedType" value="swim">${localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.speedSwim")}</label>` +
+                            `</div>`,
+                        ok: {
+                            label: localize("PF2ECREATUREADJUSTMENT.speedTypeDialog.button"),
+                            callback: (event, button, dialog) => new FormData(button.form!).get("speedType") as string
+                        },
+                        rejectClose: false
+                    });
+                    if (speedType) {
+                        const speed = system.movement.speeds.land.value;
+                        updateData['system.attributes.speed.otherSpeeds'] = [{ type: speedType, value: speed }];
+                    }
+                } catch (error) {
+                    throw error;
+                }  
             }
             await actor.update(updateData);
             // apply dc for howl

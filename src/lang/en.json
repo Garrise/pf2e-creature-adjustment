@@ -30,5 +30,7 @@
   "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.unusualBane": "Unusual Bane",
   "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.explosiveEnd": "Explosive End",
   "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.shiftingIridescence": "Shifting Iridescence",
-  "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.marrowlance": "Marrowlance"
+  "PF2ECREATUREADJUSTMENT.creature-template.mutantCryptid.optionalAbilities.marrowlance": "Marrowlance",
+  "PF2ECREATUREADJUSTMENT.creature-template.experimentalCryptid.name": "Experimental Cryptid",
+  "PF2ECREATUREADJUSTMENT.creature-template.experimentalCryptid.prefix": "Experimental Cryptid "
 }

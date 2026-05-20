@@ -68,7 +68,7 @@ export function getFolderInFolder(name: string, parentName?: string) {
     let parent: any;
     if (parentName) {
         parent = game.folders?.getName(parentName);
-        return parent.getSubfolders().find((f) => f.name === name);
+        return parent.getSubfolders().find((f: any) => f.name === name);
     } else {
         return getFolder(name);
     }
